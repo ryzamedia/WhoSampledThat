@@ -67,9 +67,9 @@ wrangler deploy
 ## Configuration
 
 - **wrangler.toml**: Configuration for Cloudflare Workers with custom domain routing
-- **src/worker.js**: Simple worker that serves static assets
+- **src/worker.js**: Serves static assets, shared-result metadata, and PNG scorecards
 - **Build output**: `dist` directory (configured in wrangler.toml)
-- **SPA routing**: Enabled for React Router support
+- **SPA routing**: Enabled, with Worker-first routes for `/share/*` and `/api/share-image/*`
 - **Custom domain**: Configured to serve from whosampledthat.com
 
 ## Security for Open Source
