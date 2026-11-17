@@ -23,7 +23,7 @@ This project is configured to automatically deploy to Cloudflare Workers using S
 
 ### 2. Configure GitHub Secrets
 
-1. Go to your GitHub repository: `https://github.com/AIXR-VRA/WhoSampledThat`
+1. Go to your GitHub repository: `https://github.com/ryzamedia/WhoSampledThat`
 2. Navigate to Settings → Secrets and variables → Actions
 3. Add these repository secrets:
    - `CLOUDFLARE_API_TOKEN`: Your Cloudflare API token
@@ -33,9 +33,18 @@ This project is configured to automatically deploy to Cloudflare Workers using S
 
 Once the secrets are configured, any push to the `master` or `main` branch **from the original repository** will trigger an automatic deployment.
 
-**Security Note**: The GitHub Actions workflow includes a repository check (`github.repository == 'AIXR-VRA/WhoSampledThat'`) to prevent deployments from forks.
+**Security Note**: The GitHub Actions workflow includes a repository check (`github.repository == 'ryzamedia/WhoSampledThat'`) to prevent deployments from forks.
 
 Your app will be available at: `https://whosampledthat.com`
+
+## Custom Domain and DNS
+
+`whosampledthat.com` is registered at **Spaceship**. Cloudflare hosts the DNS zone and the `whosampledthat` Worker.
+
+- In Spaceship, open the domain's **Nameservers & DNS** settings and use the exact nameservers assigned to the domain in Cloudflare.
+- Both `whosampledthat.com` and `www.whosampledthat.com` are declared as Worker custom domains in `wrangler.toml`. Deployments preserve these connections.
+- The Cloudflare zone must be active before the custom domains can serve traffic. Cloudflare provisions the DNS records and HTTPS certificates for the Worker custom domains.
+- Do not use the old `dns101.registrar-servers.com` / `dns102.registrar-servers.com` nameservers; those sent visitors to a parking page.
 
 ## Manual Deployment
 
@@ -65,7 +74,7 @@ wrangler deploy
 
 ## Security for Open Source
 
-- **Repository Check**: Deployment only works from `AIXR-VRA/WhoSampledThat`, not from forks
+- **Repository Check**: Deployment only works from `ryzamedia/WhoSampledThat`, not from forks
 - **Secret Protection**: GitHub secrets are only available to the original repository
 - **PR Testing**: Pull requests from forks run tests but cannot deploy
 - **Safe Contributions**: Contributors can develop and test locally without deployment access
@@ -76,4 +85,4 @@ wrangler deploy
 - Automatic asset optimization and caching
 - Built-in SPA routing support
 - Custom domain integration
-- Tighter integration with Workers ecosystem 
+- Tighter integration with Workers ecosystem
