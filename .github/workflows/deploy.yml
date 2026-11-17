@@ -46,7 +46,7 @@ jobs:
     name: Deploy to Production
     needs: test
     # Security: Only deploy from the original repository on push to main/master
-    if: github.event_name == 'push' && github.repository == 'AIXR-VRA/WhoSampledThat'
+    if: github.event_name == 'push' && github.repository == 'ryzamedia/WhoSampledThat'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -70,4 +70,4 @@ jobs:
         run: npx wrangler deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }} 
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
