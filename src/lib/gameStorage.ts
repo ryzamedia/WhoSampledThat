@@ -1,5 +1,4 @@
 import tracklist from "../data/tracklist.json";
-export type Theme = "auto" | "classic" | "christmas" | "new-year" | "halloween";
 export type ScoreCategory = "artist" | "track" | "sample";
 export interface Player {
   id: number;
@@ -9,7 +8,7 @@ export interface Player {
 export interface GameSettings {
   jingleEnabled: boolean;
   autoPlayEnabled: boolean;
-  theme: Theme;
+  motionEnabled: boolean;
 }
 export type RoundScores = Record<
   number,
@@ -26,7 +25,7 @@ export interface PersistedGameState {
 export const defaultSettings: GameSettings = {
   jingleEnabled: true,
   autoPlayEnabled: false,
-  theme: "auto",
+  motionEnabled: true,
 };
 export const emptyGame = (): PersistedGameState => ({
   version: 2,
@@ -37,13 +36,6 @@ export const emptyGame = (): PersistedGameState => ({
   roundScores: {},
 });
 const STORAGE_KEY = "whoSampledThatGame";
-export const themes: Theme[] = [
-  "auto",
-  "classic",
-  "christmas",
-  "new-year",
-  "halloween",
-];
 export function saveGameState(state: PersistedGameState): boolean {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -128,9 +120,7 @@ export function loadGameState(): PersistedGameState | null {
           typeof saved.settings?.autoPlayEnabled === "boolean"
             ? saved.settings.autoPlayEnabled
             : defaultSettings.autoPlayEnabled,
-        theme: themes.includes(saved.settings?.theme)
-          ? saved.settings.theme
-          : "auto",
+        motionEnabled: saved.settings?.motionEnabled !== false,
       },
     };
   } catch {

@@ -1,7 +1,6 @@
 import { Fragment } from 'react';
 import { Popover, Transition, Switch } from '@headlessui/react';
-import { Settings, Music, Play } from 'lucide-react';
-import type { Theme } from '../lib/gameStorage';
+import { Settings, Music, Play, Sparkles } from 'lucide-react';
 import { useGame } from '../contexts/GameContext';
 
 export default function SettingsDropdown() {
@@ -93,12 +92,19 @@ export default function SettingsDropdown() {
                     </div>
                   </div>
 
-              <div className="player-card p-3 md:p-4">
-                <label htmlFor="seasonal-theme" className="text-white font-bold text-sm md:text-lg">Festive accents</label>
-                <select id="seasonal-theme" className="seasonal-select" value={settings.theme} onChange={e => updateSettings({theme: e.target.value as Theme})}>
-                  <option value="auto">Automatic (follow the seasons)</option><option value="classic">Off (original look)</option><option value="christmas">Christmas</option><option value="new-year">New Year</option><option value="halloween">Halloween</option>
-                </select>
-                <p className="text-gray-400 text-xs mt-2">Christmas in December, New Year 31 Dec–5 Jan, Halloween 15–31 Oct. Your local date.</p>
+              <div className="player-card p-3 md:p-4 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <Sparkles className="w-5 h-5 text-yellow-300 shrink-0" aria-hidden="true" />
+                  <div>
+                    <span className="text-white font-bold text-sm md:text-lg">Background motion</span>
+                    <p className="text-gray-400 text-xs md:text-sm">Falling notes and seasonal decorations</p>
+                  </div>
+                </div>
+                <Switch checked={settings.motionEnabled} onChange={motionEnabled => updateSettings({motionEnabled})}
+                  aria-label="Animate background"
+                  className={`${settings.motionEnabled ? 'bg-gradient-to-r from-green-400 to-green-500' : 'bg-gray-600'} relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors`}>
+                  <span className={`${settings.motionEnabled ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 rounded-full bg-white transition-transform`} />
+                </Switch>
               </div>
             </div>
           </div>

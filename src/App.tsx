@@ -323,18 +323,18 @@ function SaveStatus() {
 }
 function App() {
   return (
-    <div className="min-h-screen relative">
+    <GameProvider>
+    <div className="min-h-screen relative isolate">
       <AnimatedBackground />
+      <SeasonalAccents />
       <div className="container mx-auto px-2 sm:px-6 py-8 relative z-10">
-        <GameProvider>
-          <SeasonalAccents />
           <AppHeader />
           <SaveStatus />
           <GameContent />
           <Footer />
-        </GameProvider>
       </div>
     </div>
+    </GameProvider>
   );
 }
 

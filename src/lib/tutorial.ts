@@ -16,76 +16,27 @@ export const createTutorial = (_onSkip: () => void, onComplete: () => void, onSt
     overlayClickBehavior: 'close',
     steps: [
       {
-        element: '.tutorial-welcome',
-        popover: {
-          title: '🎵 Welcome to Who Sampled That!',
-          description: 'This is your first game! Who Sampled that is best played with a group of friends who can discuss their guesses out loud. Pro tip: connect your phone to a speaker to hear the music together!',
-          side: 'bottom',
-          align: 'start',
-          showButtons: ['next']
-        }
-      },
-      {
         element: isMobile ? '.tutorial-original-sample-mobile' : '.tutorial-original-sample-desktop',
         popover: {
-          title: '🎼 Original Sample Player',
-          description: 'This is the original sample. Press Play to hear what to listen for. Short samples stop automatically; use Restart to listen again.',
-          side: isMobile ? 'top' : 'bottom',
-          align: 'center'
-        }
-      },
-      {
-        element: isMobile ? '.tutorial-play-restart-buttons-mobile' : '.tutorial-play-restart-buttons-desktop',
-        popover: {
-          title: '▶️ Play Controls',
-          description: 'Use these buttons to control playback and restart to hear the sample again. Listen carefully to this original sample!',
-          side: 'top',
-          align: 'center'
-        }
-      },
-      {
-        popover: {
-          title: '🤔 WHO SAMPLED THAT?',
-          description: 'Now discuss with your team: WHO SAMPLED THAT original track? <br/>• Which NEW artist used this sample?<br/>• What is the NEW song title?<br/>• Bonus: What is the original track name and artist?<br/><br/>Make your guesses out loud before moving on!',
-          side: 'bottom',
-          align: 'center'
+          title: '1. Listen and guess',
+          description: 'Play the original sample. Guess out loud which NEW artist and song used it. Use Replay to listen again. Bonus: name the original sample.',
+          side: isMobile ? 'top' : 'bottom', align: 'center', showButtons: ['next']
         }
       },
       {
         element: isMobile ? '.tutorial-new-song-mobile' : '.tutorial-new-song-desktop',
         popover: {
-          title: '🎤 Check Your Guesses!',
-          description: 'After making your guesses about WHO SAMPLED THAT, play the new song to see if you were right! Listen for where the sample appears.',
-          side: isMobile ? 'top' : 'bottom',
-          align: 'center'
-        }
-      },
-      {
-        element: isMobile ? '.tutorial-reveal-buttons-container-mobile' : '.tutorial-reveal-buttons-container-desktop',
-        popover: {
-          title: '👁️ Reveal the Answers',
-          description: 'Once you\'ve made your guesses and heard both tracks, click the eye buttons to reveal the answers. Did you guess who sampled that correctly?',
-          side: 'top',
-          align: 'center'
+          title: '2. Reveal the answers',
+          description: 'After everyone has guessed, play the new song. Tap Reveal on each track to see its artist and song title.',
+          side: isMobile ? 'top' : 'bottom', align: 'center'
         }
       },
       {
         element: '.tutorial-players-section',
         popover: {
-          title: '👥 Players & Scoring',
-          description: 'Here you can award points to players for correct guesses! Click the buttons to award points for Artist, Track, and Sample. Each category is worth 1 point.',
-          side: 'top',
-          align: 'center'
-        }
-      },
-      {
-        element: isMobile ? '.tutorial-next-round-mobile' : '.tutorial-next-round-desktop',
-        popover: {
-          title: '➡️ Next Round',
-          description: 'When you\'re ready, click "Next Round" to move to the next track. Points are saved automatically! This completes the tutorial.',
-          side: 'top',
-          align: 'center',
-          showButtons: ['previous', 'next']
+          title: '3. Award points',
+          description: 'Tap a correct category under each player to add 1 point. Tap again to undo. Each player can earn up to 3 points per round. Then choose Next round; scores save automatically.',
+          side: 'top', align: 'center', nextBtnText: 'Let’s play'
         }
       }
     ],

@@ -43,6 +43,7 @@ function GameSetup() {
             <h2 className="shrikhand-regular text-2xl sm:text-3xl text-white">The Ultimate Music Party Game</h2>
           </div>
           <p className="text-gray-400 text-base sm:text-lg">Who's ready to guess some samples? 🎵</p>
+          <p className="text-gray-300 text-sm leading-relaxed mt-3 max-w-md mx-auto">Listen to the original. Guess which artist and song sampled it. Reveal the answers, then award points.</p>
         </div>
         
         {/* Add Player Form with jukebox styling */}
