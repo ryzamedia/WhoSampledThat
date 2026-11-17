@@ -1,15 +1,20 @@
 {
-      "name": "Who Sampled That? - The Ultimate Music Party Game",
+  "name": "Who Sampled That? - The Ultimate Music Party Game",
   "short_name": "Who Sampled That?",
   "description": "Test your music knowledge by identifying original samples and the songs that use them. Play with friends, compete for points, and discover musical connections.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#1f2937",
-  "theme_color": "#1f2937",
+  "background_color": "#f5f2e9",
+  "theme_color": "#f5f2e9",
   "orientation": "portrait-primary",
   "scope": "/",
   "lang": "en",
-  "categories": ["games", "music", "entertainment", "education"],
+  "categories": [
+    "games",
+    "music",
+    "entertainment",
+    "education"
+  ],
   "icons": [
     {
       "src": "/favicon_io/favicon-16x16.png",
@@ -17,7 +22,7 @@
       "type": "image/png"
     },
     {
-      "src": "/favicon_io/favicon-32x32.png", 
+      "src": "/favicon_io/favicon-32x32.png",
       "sizes": "32x32",
       "type": "image/png"
     },
@@ -34,7 +39,7 @@
     },
     {
       "src": "/favicon_io/android-chrome-512x512.png",
-      "sizes": "512x512", 
+      "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     }
@@ -43,7 +48,7 @@
     {
       "name": "Start New Game",
       "short_name": "New Game",
-                  "description": "Start a new music party game",
+      "description": "Start a new music party game",
       "url": "/",
       "icons": [
         {
@@ -53,21 +58,5 @@
         }
       ]
     }
-  ],
-  "screenshots": [
-    {
-      "src": "/who-sampled-that-screenshot.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "Who Sampled That Game Interface"
-    },
-    {
-      "src": "/who-sampled-that-mobile-screenshot.png", 
-      "sizes": "375x812",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Mobile Game Interface"
-    }
   ]
-} 
+}
