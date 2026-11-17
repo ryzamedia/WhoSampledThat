@@ -6,11 +6,15 @@ import { UserPlus, Users, Play, Trash2 } from 'lucide-react';
 function GameSetup() {
   const { players, addPlayer, removePlayer, startGame } = useGame();
   const [playerName, setPlayerName] = useState('');
+  const [nameError, setNameError] = useState('');
 
   const handleAddPlayer = () => {
+    if (players.some(p => p.name.toLocaleLowerCase() === playerName.trim().toLocaleLowerCase())) { setNameError('That name is already in the game. Try a nickname.'); return; }
+    if (players.length >= 12) { setNameError('Up to 12 players can join. You can also play in teams.'); return; }
     if (playerName.trim()) {
       addPlayer(playerName);
       setPlayerName('');
+      setNameError('');
     }
   };
 
@@ -49,8 +53,11 @@ function GameSetup() {
               <Input
                 type="text"
                 value={playerName}
-                onChange={(e) => setPlayerName(e.target.value)}
-                onKeyPress={handleKeyPress}
+                onChange={(e) => { setPlayerName(e.target.value); setNameError(''); }}
+                maxLength={30}
+                aria-invalid={!!nameError}
+                aria-describedby={nameError ? 'name-error' : undefined}
+                onKeyDown={handleKeyPress}
                                 placeholder="Enter a cool name..."
                 className="modern-input flex-1 text-base sm:text-lg py-3 sm:py-2"
               />
@@ -63,6 +70,7 @@ function GameSetup() {
                 Add Player
               </Button>
             </div>
+            {nameError && <p id="name-error" role="alert" className="text-red-300 text-sm">{nameError}</p>}
           </Field>
         </div>
         
@@ -84,6 +92,7 @@ function GameSetup() {
                   </div>
                   <Button 
                     onClick={() => removePlayer(player.id)}
+                    aria-label={`Remove ${player.name}`}
                     className="modern-button danger px-3 sm:px-4 py-2 flex items-center gap-1 sm:gap-2 text-xs sm:text-sm font-semibold ml-2 flex-shrink-0"
                   >
                     <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />

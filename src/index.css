@@ -997,3 +997,18 @@ body::before {
     transform: none;
   }
 }
+
+/* Seasonal details sit around the approved design; the core layout, branding,
+   typography, surfaces, and colour palette stay the same. */
+.seasonal-accents { position: fixed; inset: 0; pointer-events: none; z-index: 40; overflow: hidden; }
+.festive-lights { position: absolute; left: 0; right: 0; top: 0; display: flex; justify-content: space-around; height: 22px; border-top: 1px solid #ffffff25; }
+.festive-lights i { display: block; width: 6px; height: 9px; border-radius: 45% 45% 50% 50%; margin-top: 4px; background: #ef5263; box-shadow: 0 0 9px #ef526390; }
+.festive-lights i:nth-child(3n) { background: #61d6b0; box-shadow: 0 0 9px #61d6b090; }
+.festive-lights i:nth-child(3n + 1) { background: #f6d47a; box-shadow: 0 0 9px #f6d47a90; }
+.festive-flakes span { position: absolute; color: #dcecff; opacity: .2; font-size: 20px; }
+.season-new-year .festive-lights i { background: #e7c77a; box-shadow: 0 0 10px #e7c77a90; border-radius: 1px; transform: rotate(35deg); }
+.season-halloween .festive-lights i { background: #f79b4a; box-shadow: 0 0 10px #f79b4a90; }
+.seasonal-select { width: 100%; color: white; background: #191925; border: 1px solid #ffffff25; border-radius: 10px; padding: 10px; margin-top: 8px; font: inherit; }
+.playback-notice a { text-decoration: underline; text-underline-offset: 3px; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid #7dd3fc; outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }

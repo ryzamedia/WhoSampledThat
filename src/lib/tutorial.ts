@@ -29,7 +29,7 @@ export const createTutorial = (_onSkip: () => void, onComplete: () => void, onSt
         element: isMobile ? '.tutorial-original-sample-mobile' : '.tutorial-original-sample-desktop',
         popover: {
           title: '🎼 Original Sample Player',
-          description: 'This is the original sample. It will auto-play so you can hear what to listen for! Notice this track says it will play for 15 seconds.',
+          description: 'This is the original sample. Press Play to hear what to listen for. Short samples stop automatically; use Restart to listen again.',
           side: isMobile ? 'top' : 'bottom',
           align: 'center'
         }
@@ -92,13 +92,6 @@ export const createTutorial = (_onSkip: () => void, onComplete: () => void, onSt
     onHighlightStarted: (_element, _step, options) => {
       if (onStepChange) {
         onStepChange(options.state.activeIndex || 0);
-      }
-    },
-    onDestroyStarted: () => {
-      // This is called when the user tries to exit the tour
-      // Show confirmation and only destroy if user confirms
-      if (!driverInstance.hasNextStep() || confirm("Are you sure you want to exit the tutorial? You can restart it anytime from the settings.")) {
-        driverInstance.destroy();
       }
     },
     onDestroyed: () => {

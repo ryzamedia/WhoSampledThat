@@ -387,3 +387,18 @@ This means you can freely use, modify, and distribute this project, even for com
   
   🌟 **Star us on GitHub** | 🍴 **Fork and contribute** | 📢 **Share with friends**
 </div>
+
+### Reliability and festive accents
+
+The original logo, typography, dark glass styling, and screen layouts are preserved.
+Settings → Festive accents adds optional lights and decorations around the existing interface.
+Automatic mode follows the visitor's local date: Christmas 1–30 December, New Year
+31 December–5 January, and Halloween 15–31 October. Choose Off to keep the original
+appearance year-round, or select a season to preview it.
+
+Use Node.js 24 or newer. Run `npm test`, `npm run lint`, and `npm run build` before
+deploying. Regression coverage includes atomic scoring, replay, saved game validation,
+season boundaries, the original game screens, playback timing, and safe results links.
+If YouTube blocks or removes an embedded video, the game offers a YouTube link and
+lets players continue to the next round. Shared results never replace the recipient's
+saved game.
