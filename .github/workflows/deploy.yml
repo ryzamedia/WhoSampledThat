@@ -71,3 +71,30 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Report custom domain nameservers
+        continue-on-error: true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          node --input-type=module <<'JS'
+          const url = new URL('https://api.cloudflare.com/client/v4/zones');
+          url.searchParams.set('name', 'whosampledthat.com');
+          url.searchParams.set('account.id', process.env.CLOUDFLARE_ACCOUNT_ID);
+          const response = await fetch(url, {
+            headers: { Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}` },
+          });
+          const data = await response.json();
+          if (!response.ok || !data.success) {
+            throw new Error(`Unable to inspect domain configuration (HTTP ${response.status})`);
+          }
+          for (const zone of data.result) {
+            console.log(JSON.stringify({
+              domain: zone.name,
+              status: zone.status,
+              nameservers: zone.name_servers,
+            }));
+          }
+          if (!data.result.length) console.log('No whosampledthat.com zone in the deployment account.');
+          JS
