@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@headlessui/react';
-import { Eye, EyeOff, Play, Pause, RotateCcw, ChevronLeft, ChevronRight, Music, Users, Award, Star, X } from 'lucide-react';
+import { Eye, EyeOff, Play, Pause, RotateCcw, ChevronLeft, ChevronRight, Music, Users, Award, Star, X, Check } from 'lucide-react';
 import YouTube from 'react-youtube';
 import { useGame } from '../contexts/GameContext';
 import WaveformPlayer from '../components/WaveformPlayer';
@@ -8,6 +8,11 @@ import roundStartSound from '../assets/who sample that jingle.mp3';
 import { createTutorial, tutorialStyles } from '../lib/tutorial';
 
 type Side = 'original' | 'new';
+const scoreCategories = [
+  { key: 'artist', label: 'New artist', icon: '🎤' },
+  { key: 'track', label: 'New song', icon: '🎵' },
+  { key: 'sample', label: 'Sample bonus', icon: '🎼' },
+] as const;
 function GameRound() {
   const { players, currentRound, currentTrack, totalRounds, nextRound, previousRound, togglePoint, roundScores: allRoundScores, settings, isFirstTimeUser, skipTutorial, markTutorialCompleted } = useGame();
   const roundScores = allRoundScores?.[currentRound] || {};
@@ -171,7 +176,7 @@ function GameRound() {
           <div className="modern-card p-4 bg-gradient-to-r from-blue-600 to-purple-600 border-2 border-blue-400">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                <div className="w-8 h-8 bg-white/20 rounded-full flex flex-col gap-1 items-center justify-center">
                   <Star className="w-4 h-4 text-white" />
                 </div>
                 <div>
@@ -208,6 +213,10 @@ function GameRound() {
         
         <div className="border border-gray-700/30 rounded-lg p-3 sm:p-8 pt-12 relative">
 
+      <div className="round-instructions text-center relative z-10 mb-6">
+        <p className="text-sm sm:text-base text-white font-semibold">Listen <span aria-hidden="true" className="text-cyan-300 px-1">→</span> Guess out loud <span aria-hidden="true" className="text-cyan-300 px-1">→</span> Reveal <span aria-hidden="true" className="text-cyan-300 px-1">→</span> Score</p>
+        <p className="text-xs sm:text-sm text-gray-300 mt-2">Play the original sample. Which new artist and song used it?</p>
+      </div>
       {/* Video Players */}
       <div className="tutorial-reveal-buttons-container-desktop relative z-10 mb-12">
         {/* Desktop Layout */}
@@ -252,24 +261,27 @@ function GameRound() {
                     aria-label={playingVideo === 'original' ? 'Pause original' : 'Play original'}
                     disabled={!playersReady[currentTrack.originalSample.youtubeVideoId] || !!errors.original}
                     onClick={() => playingVideo === 'original' ? pauseVideo('original') : playVideo('original')}
-                    className="modern-button primary w-16 h-16 rounded-full flex items-center justify-center"
+                    className="modern-button primary w-16 h-16 rounded-full flex flex-col gap-1 items-center justify-center"
                   >
                     {playingVideo === 'original' ? <Pause size={24} /> : <Play size={24} />}
+                    <span className="audio-control-label">{playingVideo === 'original' ? 'Pause' : 'Play'}</span>
                   </Button>
                   <Button
-                    aria-label="Restart original"
+                    aria-label="Replay original"
                     onClick={() => restartVideo('original')}
-                    className="modern-button w-16 h-16 rounded-full flex items-center justify-center"
+                    className="modern-button w-16 h-16 rounded-full flex flex-col gap-1 items-center justify-center"
                   >
                     <RotateCcw size={20} />
+                    <span className="audio-control-label">Replay</span>
                   </Button>
                 </div>
                 <Button
                   aria-label={originalRevealed ? "Hide original answer" : "Reveal original answer"}
                   onClick={() => setOriginalRevealed(!originalRevealed)}
-                  className="tutorial-reveal-button modern-button w-16 h-16 rounded-full flex items-center justify-center"
+                  className="tutorial-reveal-button modern-button w-16 h-16 rounded-full flex flex-col gap-1 items-center justify-center"
                 >
                   {originalRevealed ? <EyeOff size={20} /> : <Eye size={20} />}
+                  <span className="audio-control-label">{originalRevealed ? 'Hide' : 'Reveal'}</span>
                 </Button>
               </div>
               
@@ -342,31 +354,34 @@ function GameRound() {
                     aria-label={playingVideo === 'new' ? 'Pause new' : 'Play new'}
                     disabled={!playersReady[currentTrack.newSong.youtubeVideoId] || !!errors.new}
                     onClick={() => playingVideo === 'new' ? pauseVideo('new') : playVideo('new')}
-                    className="modern-button primary w-16 h-16 rounded-full flex items-center justify-center"
+                    className="modern-button primary w-16 h-16 rounded-full flex flex-col gap-1 items-center justify-center"
                   >
                     {playingVideo === 'new' ? <Pause size={24} /> : <Play size={24} />}
+                    <span className="audio-control-label">{playingVideo === 'new' ? 'Pause' : 'Play'}</span>
                   </Button>
                   <Button
-                    aria-label="Restart new"
+                    aria-label="Replay new"
                     onClick={() => restartVideo('new')}
-                    className="modern-button w-16 h-16 rounded-full flex items-center justify-center"
+                    className="modern-button w-16 h-16 rounded-full flex flex-col gap-1 items-center justify-center"
                   >
                     <RotateCcw size={20} />
+                    <span className="audio-control-label">Replay</span>
                   </Button>
                 </div>
                 <Button
                   aria-label={newSongRevealed ? "Hide new answer" : "Reveal new answer"}
                   onClick={() => setNewSongRevealed(!newSongRevealed)}
-                  className="tutorial-reveal-button modern-button w-16 h-16 rounded-full flex items-center justify-center"
+                  className="tutorial-reveal-button modern-button w-16 h-16 rounded-full flex flex-col gap-1 items-center justify-center"
                 >
                   {newSongRevealed ? <EyeOff size={20} /> : <Eye size={20} />}
+                  <span className="audio-control-label">{newSongRevealed ? 'Hide' : 'Reveal'}</span>
                 </Button>
               </div>
               
               {/* Label */}
               <div className="absolute top-4 left-4 z-30">
                 <div className="modern-button px-4 py-2 text-sm retro-tech font-bold chrome-border">
-                  🎤 NEW TRACK
+                  🎤 NEW SONG
                 </div>
               </div>
               
@@ -436,24 +451,27 @@ function GameRound() {
                     aria-label={playingVideo === 'original' ? 'Pause original' : 'Play original'}
                     disabled={!playersReady[currentTrack.originalSample.youtubeVideoId] || !!errors.original}
                     onClick={() => playingVideo === 'original' ? pauseVideo('original') : playVideo('original')}
-                    className="modern-button primary w-12 h-12 rounded-full flex items-center justify-center"
+                    className="modern-button primary w-12 h-12 rounded-full flex flex-col gap-1 items-center justify-center"
                   >
                     {playingVideo === 'original' ? <Pause size={20} /> : <Play size={20} />}
+                    <span className="audio-control-label">{playingVideo === 'original' ? 'Pause' : 'Play'}</span>
                   </Button>
                   <Button
-                    aria-label="Restart original"
+                    aria-label="Replay original"
                     onClick={() => restartVideo('original')}
-                    className="modern-button w-12 h-12 rounded-full flex items-center justify-center"
+                    className="modern-button w-12 h-12 rounded-full flex flex-col gap-1 items-center justify-center"
                   >
                     <RotateCcw size={16} />
+                    <span className="audio-control-label">Replay</span>
                   </Button>
                 </div>
                 <Button
                   aria-label={originalRevealed ? "Hide original answer" : "Reveal original answer"}
                   onClick={() => setOriginalRevealed(!originalRevealed)}
-                  className="tutorial-reveal-button modern-button w-12 h-12 rounded-full flex items-center justify-center"
+                  className="tutorial-reveal-button modern-button w-12 h-12 rounded-full flex flex-col gap-1 items-center justify-center"
                 >
                   {originalRevealed ? <EyeOff size={16} /> : <Eye size={16} />}
+                  <span className="audio-control-label">{originalRevealed ? 'Hide' : 'Reveal'}</span>
                 </Button>
               </div>
               
@@ -526,31 +544,34 @@ function GameRound() {
                     aria-label={playingVideo === 'new' ? 'Pause new' : 'Play new'}
                     disabled={!playersReady[currentTrack.newSong.youtubeVideoId] || !!errors.new}
                     onClick={() => playingVideo === 'new' ? pauseVideo('new') : playVideo('new')}
-                    className="modern-button primary w-12 h-12 rounded-full flex items-center justify-center"
+                    className="modern-button primary w-12 h-12 rounded-full flex flex-col gap-1 items-center justify-center"
                   >
                     {playingVideo === 'new' ? <Pause size={20} /> : <Play size={20} />}
+                    <span className="audio-control-label">{playingVideo === 'new' ? 'Pause' : 'Play'}</span>
                   </Button>
                   <Button
-                    aria-label="Restart new"
+                    aria-label="Replay new"
                     onClick={() => restartVideo('new')}
-                    className="modern-button w-12 h-12 rounded-full flex items-center justify-center"
+                    className="modern-button w-12 h-12 rounded-full flex flex-col gap-1 items-center justify-center"
                   >
                     <RotateCcw size={16} />
+                    <span className="audio-control-label">Replay</span>
                   </Button>
                 </div>
                 <Button
                   aria-label={newSongRevealed ? "Hide new answer" : "Reveal new answer"}
                   onClick={() => setNewSongRevealed(!newSongRevealed)}
-                  className="tutorial-reveal-button modern-button w-12 h-12 rounded-full flex items-center justify-center"
+                  className="tutorial-reveal-button modern-button w-12 h-12 rounded-full flex flex-col gap-1 items-center justify-center"
                 >
                   {newSongRevealed ? <EyeOff size={16} /> : <Eye size={16} />}
+                  <span className="audio-control-label">{newSongRevealed ? 'Hide' : 'Reveal'}</span>
                 </Button>
               </div>
               
               {/* Label */}
               <div className="absolute top-3 left-3 z-30">
                 <div className="modern-button px-3 py-1 text-xs retro-tech font-bold chrome-border">
-                  🎤 NEW TRACK
+                  🎤 NEW SONG
                 </div>
               </div>
               
@@ -583,127 +604,36 @@ function GameRound() {
         <div className="text-center mb-6 md:mb-8">
           <div className="flex items-center justify-center gap-2 md:gap-3 mb-3 md:mb-4">
             <Users className="w-6 h-6 md:w-8 md:h-8 text-green-400" />
-            <h3 className="shrikhand-regular text-xl md:text-3xl text-white">Players & Scoring</h3>
+            <h3 className="shrikhand-regular text-xl md:text-3xl text-white">Who got it right?</h3>
             <Award className="w-6 h-6 md:w-8 md:h-8 text-yellow-400" />
           </div>
-          <p className="text-gray-400 text-sm md:text-lg">Award points for correct guesses! ⭐</p>
+          <p id="scoring-help" className="text-gray-300 text-sm md:text-base">Tap a correct guess to add 1 point. Tap again to undo.</p>
+          <p className="text-gray-400 text-xs md:text-sm mt-2">Up to 3 points each round. Bonus: name the original sample.</p>
         </div>
         
         <div className="space-y-4 md:space-y-6">
           {players.map((player, index) => (
             <div key={player.id} className="player-card p-4 md:p-6 relative overflow-hidden">
-              
-              {/* Desktop Layout */}
-              <div className="hidden md:flex items-center justify-between relative z-10">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gradient-to-r from-purple-400 to-pink-500 rounded-full flex items-center justify-center text-white font-black text-lg">
-                    {index + 1}
-                  </div>
-                  <div className="flex flex-col items-start">
-                    <span className="text-white font-black text-2xl">{player.name}</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-gray-400 font-medium">Total Score:</span>
-                      <div className="score-badge">{player.score} pts</div>
-                    </div>
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 relative z-10">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 md:w-12 md:h-12 shrink-0 bg-gradient-to-r from-purple-400 to-pink-500 rounded-full flex items-center justify-center text-white font-black text-lg">{index + 1}</div>
+                  <div className="min-w-0 text-left">
+                    <div className="text-white font-black text-lg md:text-2xl break-words">{player.name}</div>
+                    <div className="flex items-center gap-2 mt-1"><span className="text-gray-400 text-sm">Total:</span><span className="score-badge">{player.score} pts</span></div>
+                    <p className="text-cyan-200 text-xs mt-2" aria-live="polite">This round: {scoreCategories.filter(({key}) => roundScores[player.id]?.[key]).length} / 3</p>
                   </div>
                 </div>
-                <div className="tutorial-scoring-buttons flex gap-3">
-                  <Button 
-                    aria-label={`${player.name}: artist`}
-                    aria-pressed={!!roundScores[player.id]?.artist}
-                    onClick={() => togglePoint(player.id, 'artist')}
-                    className={`modern-button px-4 py-3 text-sm retro-tech font-bold flex items-center gap-2 chrome-border ${
-                      roundScores[player.id]?.artist ? 'success' : ''
-                    }`}
-                  >
-                    {roundScores[player.id]?.artist && '✅'}
-                    🎤 ARTIST
-                  </Button>
-                  <Button 
-                    aria-label={`${player.name}: track`}
-                    aria-pressed={!!roundScores[player.id]?.track}
-                    onClick={() => togglePoint(player.id, 'track')}
-                    className={`modern-button px-4 py-3 text-sm retro-tech font-bold flex items-center gap-2 chrome-border ${
-                      roundScores[player.id]?.track ? 'success' : ''
-                    }`}
-                  >
-                    {roundScores[player.id]?.track && '✅'}
-                    🎵 TRACK
-                  </Button>
-                  <Button 
-                    aria-label={`${player.name}: sample`}
-                    aria-pressed={!!roundScores[player.id]?.sample}
-                    onClick={() => togglePoint(player.id, 'sample')}
-                    className={`modern-button px-4 py-3 text-sm retro-tech font-bold flex items-center gap-2 chrome-border ${
-                      roundScores[player.id]?.sample ? 'success' : ''
-                    }`}
-                  >
-                    {roundScores[player.id]?.sample && '✅'}
-                    🎼 SAMPLE
-                  </Button>
-                </div>
-              </div>
-
-              {/* Mobile Layout */}
-              <div className="md:hidden relative z-10">
-                {/* Player Info */}
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-gradient-to-r from-purple-400 to-pink-500 rounded-full flex items-center justify-center text-white font-black text-sm">
-                    {index + 1}
-                  </div>
-                  <div className="flex flex-col items-start">
-                    <div className="text-white font-black text-lg">{player.name}</div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-gray-400 text-sm font-medium">Score:</span>
-                      <div className="score-badge text-sm">{player.score} pts</div>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Scoring Buttons */}
-                <div className="tutorial-scoring-buttons grid grid-cols-3 gap-2">
-                  <Button 
-                    aria-label={`${player.name}: artist`}
-                    aria-pressed={!!roundScores[player.id]?.artist}
-                    onClick={() => togglePoint(player.id, 'artist')}
-                    className={`modern-button px-2 py-3 text-xs retro-tech font-bold flex flex-col items-center gap-1 chrome-border ${
-                      roundScores[player.id]?.artist ? 'success' : ''
-                    }`}
-                  >
-                    <div className="flex items-center gap-1">
-                      {roundScores[player.id]?.artist && <span className="text-xs">✅</span>}
-                      <span>🎤</span>
-                    </div>
-                    <span>ARTIST</span>
-                  </Button>
-                  <Button 
-                    aria-label={`${player.name}: track`}
-                    aria-pressed={!!roundScores[player.id]?.track}
-                    onClick={() => togglePoint(player.id, 'track')}
-                    className={`modern-button px-2 py-3 text-xs retro-tech font-bold flex flex-col items-center gap-1 chrome-border ${
-                      roundScores[player.id]?.track ? 'success' : ''
-                    }`}
-                  >
-                    <div className="flex items-center gap-1">
-                      {roundScores[player.id]?.track && <span className="text-xs">✅</span>}
-                      <span>🎵</span>
-                    </div>
-                    <span>TRACK</span>
-                  </Button>
-                  <Button 
-                    aria-label={`${player.name}: sample`}
-                    aria-pressed={!!roundScores[player.id]?.sample}
-                    onClick={() => togglePoint(player.id, 'sample')}
-                    className={`modern-button px-2 py-3 text-xs retro-tech font-bold flex flex-col items-center gap-1 chrome-border ${
-                      roundScores[player.id]?.sample ? 'success' : ''
-                    }`}
-                  >
-                    <div className="flex items-center gap-1">
-                      {roundScores[player.id]?.sample && <span className="text-xs">✅</span>}
-                      <span>🎼</span>
-                    </div>
-                    <span>SAMPLE</span>
-                  </Button>
+                <div className="tutorial-scoring-buttons grid grid-cols-3 gap-2 md:gap-3 shrink-0">
+                  {scoreCategories.map(({key, label, icon}) => {
+                    const selected = !!roundScores[player.id]?.[key];
+                    return <Button key={key} aria-label={`${player.name}: ${label}`} aria-pressed={selected} aria-describedby="scoring-help"
+                      onClick={() => togglePoint(player.id, key)}
+                      className={`score-toggle modern-button chrome-border px-2 md:px-4 py-3 flex flex-col items-center gap-1 ${selected ? 'success' : ''}`}>
+                      <span aria-hidden="true">{icon}</span>
+                      <span className="font-semibold text-xs md:text-sm">{label}</span>
+                      <span className="score-toggle-value flex items-center justify-center gap-1 text-xs font-bold">{selected ? <><Check className="w-3 h-3" aria-hidden="true" />1 point</> : '+1'}</span>
+                    </Button>;
+                  })}
                 </div>
               </div>
             </div>
@@ -728,10 +658,10 @@ function GameRound() {
             <div className="shrikhand-regular text-white text-lg font-bold">ROUND {currentRound} OF {totalRounds}</div>
           </div>
           <Button 
-            aria-label="Next round" onClick={handleNextRound}
+            aria-label={currentRound === totalRounds ? "See results" : "Next round"} onClick={handleNextRound}
             className="tutorial-next-round-desktop modern-button primary px-6 py-4 text-lg retro-tech font-bold flex items-center gap-3 chrome-border"
           >
-            NEXT ROUND
+            {currentRound === totalRounds ? "SEE RESULTS" : "NEXT ROUND"}
             <ChevronRight className="w-5 h-5" />
           </Button>
         </div>
@@ -745,16 +675,16 @@ function GameRound() {
             <Button 
               aria-label="Previous round" onClick={handlePreviousRound}
               disabled={currentRound <= 1}
-              className="modern-button px-4 py-3 text-sm retro-tech font-bold flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed flex-1 chrome-border"
+              className="modern-button px-4 py-3 text-xs whitespace-nowrap retro-tech font-bold flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed flex-1 chrome-border"
             >
               <ChevronLeft className="w-4 h-4" />
-              PREV
+              PREVIOUS
             </Button>
             <Button 
-              aria-label="Next round" onClick={handleNextRound}
-              className="tutorial-next-round-mobile modern-button primary px-4 py-3 text-sm retro-tech font-bold flex items-center gap-2 flex-1 chrome-border"
+              aria-label={currentRound === totalRounds ? "See results" : "Next round"} onClick={handleNextRound}
+              className="tutorial-next-round-mobile modern-button primary px-4 py-3 text-xs whitespace-nowrap retro-tech font-bold flex items-center gap-2 flex-1 chrome-border"
             >
-              NEXT
+              {currentRound === totalRounds ? "RESULTS" : "NEXT ROUND"}
               <ChevronRight className="w-4 h-4" />
             </Button>
           </div>

@@ -1,7 +1,9 @@
 import { expect, it } from "vitest";
 import { getSeason } from "../src/lib/season";
 it.each([
-  [2026, 10, 17, "classic"],
+  [2026, 10, 14, "classic"],
+  [2026, 10, 15, "christmas"],
+  [2026, 10, 17, "christmas"],
   [2026, 11, 1, "christmas"],
   [2026, 11, 25, "christmas"],
   [2026, 11, 30, "christmas"],
@@ -19,7 +21,3 @@ it.each([
     ).toBe(theme);
   },
 );
-it("lets people preview a season or turn seasonal accents off", () => {
-  expect(getSeason(new Date(2026, 10, 17), "christmas")).toBe("christmas");
-  expect(getSeason(new Date(2026, 11, 25), "classic")).toBe("classic");
-});

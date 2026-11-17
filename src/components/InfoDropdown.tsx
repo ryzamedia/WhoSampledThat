@@ -6,22 +6,13 @@ import { useGame } from '../contexts/GameContext';
 export default function InfoDropdown() {
   const { restartTutorial, gamePhase } = useGame();
 
-  const handleStartTutorial = () => {
-    // Reset tutorial state to show it again
-    restartTutorial();
-    
-    // If we're not in the playing phase, navigate to the game
-    if (gamePhase !== 'playing') {
-      // Refresh the page to start fresh and trigger tutorial on round 1
-      window.location.reload();
-    }
-  };
+  const handleStartTutorial = () => restartTutorial();
 
   return (
     <Menu as="div" className="relative inline-block text-left">
       <div>
-        <Menu.Button aria-label="About and how to play" className="modern-button p-3 flex items-center justify-center">
-          <Info className="h-5 w-5" aria-hidden="true" />
+        <Menu.Button aria-label="About and how to play" className="modern-button p-3 flex items-center justify-center gap-2">
+          <Info className="h-5 w-5" aria-hidden="true" /><span className="text-sm font-semibold">How to play</span>
         </Menu.Button>
       </div>
       <Transition
@@ -50,7 +41,7 @@ export default function InfoDropdown() {
                 </p>
                 <p className="mb-2 md:mb-3 text-sm md:text-base">
                   Listen to an <strong>original sample</strong> and a <strong>new song</strong> that uses it. 
-                  Your goal is to identify the artist, track name, and sample details.
+                  Guess the new artist and song title. There is a bonus for naming the original sample.
                 </p>
                 <p className="text-xs md:text-sm text-gray-400">
                   Perfect for music lovers, DJs, and anyone who loves discovering how songs are connected! 🎼
@@ -63,10 +54,10 @@ export default function InfoDropdown() {
                   How to Play:
                 </h4>
                 <ul className="text-xs md:text-sm text-gray-300 space-y-1 ml-4 md:ml-6">
-                  <li>• Listen to both audio tracks carefully</li>
-                  <li>• Guess the artist, track, and sample details</li>
-                  <li>• Award points to players for correct answers</li>
-                  <li>• Use the reveal buttons to see the answers</li>
+                  <li>1. Play the original sample.</li>
+                  <li>2. Guess the artist and title of the song that used it.</li>
+                  <li>3. Play the new song and reveal the answers.</li>
+                  <li>4. Award 1 point for each correct category. Tap again to undo.</li>
                 </ul>
               </div>
             </div>

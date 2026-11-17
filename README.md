@@ -118,16 +118,17 @@ npx wrangler publish # Deploy to Cloudflare Workers
 
 ### During Each Round
 1. **Listen**: Play the original sample to hear the source material
-2. **Guess**: Identify the artist and track name of the original
-3. **Connect**: Play the new track that samples the original
+2. **Guess**: Identify the new artist and song that used the sample
+3. **Reveal**: Play the new song, then reveal the answers on both players
 4. **Score**: Award points for correct guesses:
-   - 🎤 **Artist** (1 point)
-   - 🎵 **Track** (1 point) 
-   - 🎼 **Sample Connection** (1 point)
+   - 🎤 **New artist** (1 point)
+   - 🎵 **New song** (1 point)
+   - 🎼 **Sample bonus** for naming the original sample (1 point)
+   Tap a selected category again to undo; the round subtotal shows 0–3.
 
 ### Game Controls
 - **Play/Pause**: Control audio playback
-- **Restart**: Reset track to beginning
+- **Replay**: Restart the track or sample
 - **Reveal**: Show/hide track information
 - **Navigation**: Move between rounds freely
 
@@ -391,10 +392,11 @@ This means you can freely use, modify, and distribute this project, even for com
 ### Reliability and festive accents
 
 The original logo, typography, dark glass styling, and screen layouts are preserved.
-Settings → Festive accents adds optional lights and decorations around the existing interface.
-Automatic mode follows the visitor's local date: Christmas 1–30 December, New Year
-31 December–5 January, and Halloween 15–31 October. Choose Off to keep the original
-appearance year-round, or select a season to preview it.
+Seasonal decorations follow the visitor’s local date automatically, with no theme picker.
+Christmas runs 15 November–30 December, New Year 31 December–5 January, and
+Halloween 15–31 October. Candy canes, snowflakes and musical notes fall behind
+the game at Christmas, with seasonal lights and colours. Settings → Background
+motion pauses the decorations; reduced-motion preferences produce a still backdrop.
 
 Use Node.js 24 or newer. Run `npm test`, `npm run lint`, and `npm run build` before
 deploying. Regression coverage includes atomic scoring, replay, saved game validation,
