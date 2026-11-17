@@ -44,8 +44,9 @@ function GameRound() {
     let cancelled = false;
     const done = () => { if (!cancelled) setIntroDone(true); };
     audio.play()?.catch(done);
-    const timer = window.setTimeout(() => { audio.pause(); done(); }, 8000);
-    return () => { cancelled = true; audio.pause(); window.clearTimeout(timer); };
+    // The ~11-second jingle must finish naturally; buffering can extend that.
+    // onEnded/onError and a rejected play() release autoplay without a cutoff.
+    return () => { cancelled = true; audio.pause(); };
   }, [jingleEnabled]);
   useEffect(() => {
     if (!currentTrack || !introDone || !settings.autoPlayEnabled || autoplayAttempted.current || !playersReady[currentTrack.originalSample.youtubeVideoId]) return;
