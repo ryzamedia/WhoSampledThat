@@ -1,6 +1,7 @@
 name = "whosampledthat"
 main = "src/worker.js"
 compatibility_date = "2025-01-17"
+workers_dev = true
 
 [[routes]]
 pattern = "whosampledthat.com"
