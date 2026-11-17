@@ -1,41 +1,12 @@
-import { useState, useEffect, memo, useMemo } from 'react';
+import { memo, useMemo } from 'react';
 
 interface WaveformPlayerProps {
   isPlaying: boolean;
   duration?: number; // duration in seconds (optional)
-  onTimeUpdate?: (currentTime: number) => void;
+  currentTime?: number;
 }
 
-const WaveformPlayer = memo(({ isPlaying, duration, onTimeUpdate }: WaveformPlayerProps) => {
-  const [currentTime, setCurrentTime] = useState(0);
-
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    
-    if (isPlaying && duration) {
-      interval = setInterval(() => {
-        setCurrentTime(prev => {
-          const newTime = prev + 0.1;
-          onTimeUpdate?.(newTime);
-          return newTime >= duration ? duration : newTime;
-        });
-      }, 100);
-    } else {
-      setCurrentTime(0);
-    }
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isPlaying, duration, onTimeUpdate]);
-
-  // Reset when not playing
-  useEffect(() => {
-    if (!isPlaying) {
-      setCurrentTime(0);
-    }
-  }, [isPlaying]);
-
+const WaveformPlayer = memo(({ isPlaying, duration, currentTime = 0 }: WaveformPlayerProps) => {
   const remainingTime = duration ? Math.max(0, duration - currentTime) : 0;
   const minutes = Math.floor(remainingTime / 60);
   const seconds = Math.floor(remainingTime % 60);

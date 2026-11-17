@@ -1,17 +1,18 @@
 import { Fragment } from 'react';
-import { Menu, Transition, Switch } from '@headlessui/react';
+import { Popover, Transition, Switch } from '@headlessui/react';
 import { Settings, Music, Play } from 'lucide-react';
+import type { Theme } from '../lib/gameStorage';
 import { useGame } from '../contexts/GameContext';
 
 export default function SettingsDropdown() {
   const { settings, updateSettings } = useGame();
 
   return (
-    <Menu as="div" className="relative inline-block text-left">
+    <Popover as="div" className="relative inline-block text-left">
       <div>
-        <Menu.Button className="modern-button p-3 flex items-center justify-center">
+        <Popover.Button aria-label="Game settings" className="modern-button p-3 flex items-center justify-center">
           <Settings className="h-5 w-5" aria-hidden="true" />
-        </Menu.Button>
+        </Popover.Button>
       </div>
       <Transition
         as={Fragment}
@@ -22,7 +23,7 @@ export default function SettingsDropdown() {
         leaveFrom="transform opacity-100 scale-100"
         leaveTo="transform opacity-0 scale-95"
       >
-        <Menu.Items 
+        <Popover.Panel
           anchor="bottom"
           className="w-[calc(100vw-2rem)] max-w-80 md:w-96 md:max-w-none dropdown-menu focus:outline-none z-[100] mt-2 !left-1/2 !-translate-x-1/2"
         >
@@ -31,11 +32,10 @@ export default function SettingsDropdown() {
               <Settings className="h-5 w-5 md:h-6 md:w-6 text-blue-400" />
               <h3 className="eb-garamond-title text-lg md:text-xl text-white">Game Settings</h3>
             </div>
-            
+
             <div className="space-y-4 md:space-y-6">
-              <Menu.Item>
-                {({ active }) => (
-                  <div className={`player-card p-3 md:p-4 ${active ? 'scale-[1.02]' : ''} transition-transform`}>
+
+                  <div className={`player-card p-3 md:p-4  transition-transform`}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
                         <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-r from-purple-400 to-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
@@ -62,12 +62,10 @@ export default function SettingsDropdown() {
                       </Switch>
                     </div>
                   </div>
-                )}
-              </Menu.Item>
-              
-              <Menu.Item>
-                {({ active }) => (
-                  <div className={`player-card p-3 md:p-4 ${active ? 'scale-[1.02]' : ''} transition-transform`}>
+
+
+
+                  <div className={`player-card p-3 md:p-4  transition-transform`}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
                         <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-r from-orange-400 to-red-500 rounded-full flex items-center justify-center flex-shrink-0">
@@ -94,12 +92,18 @@ export default function SettingsDropdown() {
                       </Switch>
                     </div>
                   </div>
-                )}
-              </Menu.Item>
+
+              <div className="player-card p-3 md:p-4">
+                <label htmlFor="seasonal-theme" className="text-white font-bold text-sm md:text-lg">Festive accents</label>
+                <select id="seasonal-theme" className="seasonal-select" value={settings.theme} onChange={e => updateSettings({theme: e.target.value as Theme})}>
+                  <option value="auto">Automatic (follow the seasons)</option><option value="classic">Off (original look)</option><option value="christmas">Christmas</option><option value="new-year">New Year</option><option value="halloween">Halloween</option>
+                </select>
+                <p className="text-gray-400 text-xs mt-2">Christmas in December, New Year 31 Dec–5 Jan, Halloween 15–31 Oct. Your local date.</p>
+              </div>
             </div>
           </div>
-        </Menu.Items>
+        </Popover.Panel>
       </Transition>
-    </Menu>
+    </Popover>
   );
-} 
+}

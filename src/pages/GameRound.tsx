@@ -6,447 +6,134 @@ import { useGame } from '../contexts/GameContext';
 import WaveformPlayer from '../components/WaveformPlayer';
 import roundStartSound from '../assets/who sample that jingle.mp3';
 import { createTutorial, tutorialStyles } from '../lib/tutorial';
-import tracklist from '../data/tracklist.json';
 
-type ScoreCategory = 'artist' | 'track' | 'sample';
-
-const ROUND_SCORES_STORAGE_KEY = 'whoSampledThatRoundScores';
-
+type Side = 'original' | 'new';
 function GameRound() {
-  const { players, currentRound, currentTrack, nextRound, previousRound, awardPoints, settings, isFirstTimeUser, skipTutorial, markTutorialCompleted } = useGame();
-  const totalRounds = tracklist.length;
-  const [roundScores, setRoundScores] = useState<Record<number, Record<ScoreCategory, boolean>>>({});
-  const [persistentRoundScores, setPersistentRoundScores] = useState<Record<number, Record<number, Record<ScoreCategory, boolean>>>>({});
-  const [canPlayVideos, setCanPlayVideos] = useState(false);
-  const [playingVideo, setPlayingVideo] = useState<'original' | 'new' | null>(null);
-  const [playersReady, setPlayersReady] = useState<{ [key: string]: boolean }>({});
+  const { players, currentRound, currentTrack, totalRounds, nextRound, previousRound, togglePoint, roundScores: allRoundScores, settings, isFirstTimeUser, skipTutorial, markTutorialCompleted } = useGame();
+  const roundScores = allRoundScores?.[currentRound] || {};
+  const [playingVideo, setPlayingVideo] = useState<Side | null>(null);
+  const playingRef = useRef<Side | null>(null);
+  const [playersReady, setPlayersReady] = useState<Record<string, boolean>>({});
   const [originalRevealed, setOriginalRevealed] = useState(false);
   const [newSongRevealed, setNewSongRevealed] = useState(false);
-  const [jinglePlaying, setJinglePlaying] = useState(false);
+  const [jingleEnabled] = useState(settings.jingleEnabled);
+  const [introDone, setIntroDone] = useState(!jingleEnabled);
   const [showTutorialBanner, setShowTutorialBanner] = useState(false);
-  const [, setTutorialStep] = useState(0);
-  const [tutorialActive, setTutorialActive] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(() => window.matchMedia('(min-width: 768px)').matches);
+  const [elapsed, setElapsed] = useState<Record<Side, number>>({original: 0, new: 0});
+  const [errors, setErrors] = useState<Partial<Record<Side, string>>>({});
+  const [hint, setHint] = useState('');
   const audioRef = useRef<HTMLAudioElement>(null);
-  const playerRef = useRef<{ [key: string]: YT.Player }>({});
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const autoPlayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const tutorialRef = useRef<{ drive: () => void; destroy: () => void } | null>(null);
-
-  // Load persistent round scores from localStorage on mount
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(ROUND_SCORES_STORAGE_KEY);
-      if (saved) {
-        setPersistentRoundScores(JSON.parse(saved));
-      }
-    } catch (error) {
-      console.warn('Failed to load round scores from localStorage:', error);
-    }
-  }, []);
-
-  // Save persistent round scores to localStorage whenever they change
-  useEffect(() => {
-    try {
-      localStorage.setItem(ROUND_SCORES_STORAGE_KEY, JSON.stringify(persistentRoundScores));
-    } catch (error) {
-      console.warn('Failed to save round scores to localStorage:', error);
-    }
-  }, [persistentRoundScores]);
-
-  // Clear round scores when game starts fresh (round 1 from setup)
-  useEffect(() => {
-    if (currentRound === 1 && Object.keys(persistentRoundScores).length > 0) {
-      // Check if this is a fresh start by seeing if we have any scores for round 1
-      const hasRound1Scores = persistentRoundScores[1] && 
-        Object.values(persistentRoundScores[1]).some(playerScores => 
-          Object.values(playerScores).some(Boolean)
-        );
-      
-      if (!hasRound1Scores) {
-        // This is a fresh game start, clear all round scores
-        setPersistentRoundScores({});
-        try {
-          localStorage.removeItem(ROUND_SCORES_STORAGE_KEY);
-        } catch (error) {
-          console.warn('Failed to clear round scores from localStorage:', error);
-        }
-      }
-    }
-  }, [currentRound, persistentRoundScores]);
-
-  // Initialize states for the round (but not scores)
-  useEffect(() => {
-    setCanPlayVideos(false);
-    setPlayingVideo(null);
-    setPlayersReady({});
-    setOriginalRevealed(false);
-    setNewSongRevealed(false);
-    setJinglePlaying(false);
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-    if (autoPlayTimeoutRef.current) {
-      clearTimeout(autoPlayTimeoutRef.current);
-    }
-  }, [currentRound]);
-
-  // Load scores for the current round (separate from round initialization)
-  useEffect(() => {
-    // Load existing scores for this round if they exist, otherwise initialize
-    const existingScores = persistentRoundScores[currentRound];
-    const initialScores: Record<number, Record<ScoreCategory, boolean>> = {};
-    
-    players.forEach(player => {
-      if (existingScores && existingScores[player.id]) {
-        // Load existing scores for this round
-        initialScores[player.id] = { ...existingScores[player.id] };
-      } else {
-        // Initialize with default values
-        initialScores[player.id] = { artist: false, track: false, sample: false };
-      }
-    });
-    
-    setRoundScores(initialScores);
-  }, [currentRound, persistentRoundScores, players]);
-
-  // Handle when players are added/removed (should only happen during setup)
-  useEffect(() => {
-    setRoundScores(prevScores => {
-      const newScores = { ...prevScores };
-      players.forEach(player => {
-        if (!newScores[player.id]) {
-          newScores[player.id] = { artist: false, track: false, sample: false };
-        }
-      });
-      // Remove scores for players that no longer exist
-      Object.keys(newScores).forEach(playerIdStr => {
-        const playerId = parseInt(playerIdStr, 10);
-        if (!players.find(p => p.id === playerId)) {
-          delete newScores[playerId];
-        }
-      });
-      return newScores;
-    });
-  }, [players]);
+  const playerRef = useRef<Record<string, YT.Player>>({});
+  const autoplayAttempted = useRef(false);
+  const tutorialRef = useRef<ReturnType<typeof createTutorial> | null>(null);
 
   useEffect(() => {
-    if (currentRound > 0) {
-      if (settings.jingleEnabled) {
-        setJinglePlaying(true);
-        audioRef.current?.play();
-      } else {
-        // If jingle is disabled, allow videos to play immediately
-        setCanPlayVideos(true);
-        // Auto-play will be handled by the playersReady effect
-      }
-    }
-  }, [currentRound, settings.jingleEnabled, settings.autoPlayEnabled]);
-
-  // Cleanup timeouts on unmount
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-      if (autoPlayTimeoutRef.current) {
-        clearTimeout(autoPlayTimeoutRef.current);
-      }
-      if (tutorialRef.current) {
-        tutorialRef.current.destroy();
-      }
+    const media = window.matchMedia('(min-width: 768px)');
+    const change = () => {
+      Object.values(playerRef.current).forEach(player => player.pauseVideo());
+      playerRef.current = {}; setPlayersReady({}); setPlayingVideo(null); playingRef.current = null;
+      setElapsed({ original: 0, new: 0 }); setIsDesktop(media.matches);
     };
+    media.addEventListener('change', change);
+    return () => media.removeEventListener('change', change);
   }, []);
-
-  // Tutorial initialization and styling
   useEffect(() => {
-    // Inject tutorial styles
-    const styleElement = document.createElement('style');
-    styleElement.textContent = tutorialStyles;
-    document.head.appendChild(styleElement);
-
-    // Show tutorial for first-time users on round 1
-    if (isFirstTimeUser && currentRound === 1 && currentTrack) {
-      setShowTutorialBanner(true);
-      setTutorialActive(true);
-      
-      // Start tutorial immediately after elements are rendered
-      const startTutorial = () => {
-        tutorialRef.current = createTutorial(
-          () => {
-            // On skip
-            skipTutorial();
-            setShowTutorialBanner(false);
-            setTutorialActive(false);
-          },
-          () => {
-            // On complete
-            markTutorialCompleted();
-            setShowTutorialBanner(false);
-            setTutorialActive(false);
-          },
-          (step) => {
-            // On step change
-            setTutorialStep(step);
-          }
-        );
-        
-        if (tutorialRef.current) {
-          (window as { driverObj?: { drive: () => void; destroy: () => void } }).driverObj = tutorialRef.current;
-          tutorialRef.current.drive();
-        }
-      };
-
-      // Small delay to ensure elements are rendered, but much shorter
-      setTimeout(startTutorial, 200);
-    }
-
-    return () => {
-      document.head.removeChild(styleElement);
-    };
-  }, [isFirstTimeUser, currentRound, currentTrack, skipTutorial, markTutorialCompleted]);
-
-  // Auto-play when original sample player is ready (if jingle is disabled)
+    const audio = audioRef.current;
+    if (!jingleEnabled || !audio) return;
+    let cancelled = false;
+    const done = () => { if (!cancelled) setIntroDone(true); };
+    audio.play()?.catch(done);
+    const timer = window.setTimeout(() => { audio.pause(); done(); }, 8000);
+    return () => { cancelled = true; audio.pause(); window.clearTimeout(timer); };
+  }, [jingleEnabled]);
   useEffect(() => {
-    if (
-      currentTrack && 
-      settings.autoPlayEnabled && 
-      !settings.jingleEnabled && 
-      !jinglePlaying &&
-      canPlayVideos &&
-      playersReady[currentTrack.originalSample.youtubeVideoId] &&
-      currentRound > 0
-    ) {
-      // Small delay to ensure everything is properly initialized
-      setTimeout(() => playVideo('original'), 100);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playersReady, currentTrack, settings.autoPlayEnabled, settings.jingleEnabled, jinglePlaying, canPlayVideos, currentRound]);
-
-  const fadeOutJingle = () => {
-    if (audioRef.current && jinglePlaying) {
-      const audio = audioRef.current;
-      const fadeOut = () => {
-        if (audio.volume > 0.1) {
-          audio.volume = Math.max(0, audio.volume - 0.1);
-          setTimeout(fadeOut, 50);
-        } else {
-          audio.pause();
-          audio.currentTime = 0;
-          audio.volume = 1;
-          setJinglePlaying(false);
-        }
-      };
-      fadeOut();
-    }
-  };
-
-  const togglePoint = (playerId: number, category: ScoreCategory) => {
-    setRoundScores(prevScores => {
-      const currentlySelected = prevScores[playerId][category];
-      const newState = !currentlySelected;
-      
-      // Update the player's total score in real time
-      if (newState) {
-        // Point was turned ON - award 1 point
-        awardPoints(playerId, 1);
-      } else {
-        // Point was turned OFF - deduct 1 point
-        awardPoints(playerId, -1);
+    if (!currentTrack || !introDone || !settings.autoPlayEnabled || autoplayAttempted.current || !playersReady[currentTrack.originalSample.youtubeVideoId]) return;
+    autoplayAttempted.current = true;
+    playerRef.current[currentTrack.originalSample.youtubeVideoId]?.playVideo();
+  }, [currentTrack, introDone, settings.autoPlayEnabled, playersReady]);
+  useEffect(() => {
+    if (!playingVideo || !currentTrack) return;
+    const side = playingVideo;
+    const track = side === 'original' ? currentTrack.originalSample : currentTrack.newSong;
+    const timer = window.setInterval(() => {
+      const player = playerRef.current[track.youtubeVideoId];
+      if (!player) return;
+      const time = Math.max(0, player.getCurrentTime() - (track.startTime || 0));
+      setElapsed(prev => ({...prev, [side]: track.duration ? Math.min(time, track.duration) : time}));
+      if (track.duration && time >= track.duration) {
+        player.pauseVideo(); playingRef.current = null; setPlayingVideo(null);
       }
-      
-      const newScores = {
-        ...prevScores,
-        [playerId]: {
-          ...prevScores[playerId],
-          [category]: newState,
-        },
-      };
-      
-      // Update persistent storage for this round
-      setPersistentRoundScores(prevPersistent => ({
-        ...prevPersistent,
-        [currentRound]: {
-          ...prevPersistent[currentRound],
-          [playerId]: {
-            ...prevPersistent[currentRound]?.[playerId],
-            [category]: newState,
-          },
-        },
+    }, 250);
+    return () => window.clearInterval(timer);
+  }, [playingVideo, currentTrack]);
+  useEffect(() => {
+    if (!currentTrack) return;
+    const timer = window.setTimeout(() => {
+      setErrors(prev => ({ ...prev,
+        ...(!playerRef.current[currentTrack.originalSample.youtubeVideoId] ? {original: 'The original sample did not load. Check your connection or open it on YouTube.'} : {}),
+        ...(!playerRef.current[currentTrack.newSong.youtubeVideoId] ? {new: 'The new track did not load. Check your connection or open it on YouTube.'} : {}),
       }));
-      
-      return newScores;
-    });
-  };
-
-  const handleNextRound = () => {
-    // Stop tutorial if active
-    if (tutorialActive && tutorialRef.current) {
-      tutorialRef.current.destroy();
-      markTutorialCompleted();
-      setShowTutorialBanner(false);
-      setTutorialActive(false);
-    }
-    
-    // Fade out jingle if it's still playing
-    if (jinglePlaying) {
-      fadeOutJingle();
-    }
-    
-    // Points are already awarded in real time via togglePoint()
-    // No need to award them again here
-    
-    // Move to the next round
-    nextRound();
-    
-    // Scroll to top to show the new round's content
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handlePreviousRound = () => {
-    // Fade out jingle if it's still playing
-    if (jinglePlaying) {
-      fadeOutJingle();
-    }
-    
-    // Move to the previous round
-    previousRound();
-    
-    // Scroll to top to show the new round's content
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const opts = {
-    height: '400',
-    width: '400',
-    playerVars: {
-      autoplay: 0,
-      controls: 0,
-      showinfo: 0,
-      rel: 0,
-      modestbranding: 1,
-      title: 0,
-      iv_load_policy: 3,
-    },
-  };
-
+    }, 15000);
+    return () => window.clearTimeout(timer);
+  }, [currentTrack, isDesktop]);
+  useEffect(() => {
+    if (!isFirstTimeUser || !currentTrack) return;
+    const style = document.createElement('style'); style.textContent = tutorialStyles; document.head.appendChild(style);
+    const timer = window.setTimeout(() => {
+      setShowTutorialBanner(true);
+      tutorialRef.current = createTutorial(
+        () => { skipTutorial(); setShowTutorialBanner(false); },
+        () => { markTutorialCompleted(); setShowTutorialBanner(false); },
+        () => {},
+      );
+      tutorialRef.current?.drive();
+    }, 200);
+    return () => { window.clearTimeout(timer); tutorialRef.current?.destroy(); tutorialRef.current = null; style.remove(); };
+  }, [isFirstTimeUser, currentTrack, skipTutorial, markTutorialCompleted]);
+  function stopJingle() { audioRef.current?.pause(); setIntroDone(true); }
+  function playVideo(side: Side) {
+    if (!currentTrack) return;
+    autoplayAttempted.current = true; stopJingle();
+    const track = side === 'original' ? currentTrack.originalSample : currentTrack.newSong;
+    const player = playerRef.current[track.youtubeVideoId];
+    if (!player) return;
+    if (track.duration && elapsed[side] >= track.duration) { player.seekTo(track.startTime || 0, true); setElapsed(p => ({...p, [side]: 0})); }
+    player.playVideo();
+  }
+  function pauseVideo(side: Side) {
+    if (!currentTrack) return;
+    playerRef.current[(side === 'original' ? currentTrack.originalSample : currentTrack.newSong).youtubeVideoId]?.pauseVideo();
+  }
+  function restartVideo(side: Side) {
+    if (!currentTrack) return;
+    autoplayAttempted.current = true; stopJingle();
+    const track = side === 'original' ? currentTrack.originalSample : currentTrack.newSong;
+    setElapsed(prev => ({...prev, [side]: 0}));
+    playerRef.current[track.youtubeVideoId]?.seekTo(track.startTime || 0, true);
+    playerRef.current[track.youtubeVideoId]?.playVideo();
+  }
   const onReady = (event: { target: YT.Player }, videoId: string) => {
     playerRef.current[videoId] = event.target;
+    const side = videoId === currentTrack?.originalSample.youtubeVideoId ? "original" : "new";
+    setErrors(prev => ({...prev, [side]: undefined}));
+    event.target.addEventListener('onAutoplayBlocked', () => setHint('Your browser paused autoplay. Press Play to start the music.'));
     setPlayersReady(prev => ({ ...prev, [videoId]: true }));
   };
-
-  const onStateChange = (event: { data: number }, videoType: 'original' | 'new') => {
-    if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-    }
-
-    if (event.data === YT.PlayerState.PLAYING) {
-        // Stop the other video if it's playing
-        const otherVideoType = videoType === 'original' ? 'new' : 'original';
-        if (playingVideo === otherVideoType) {
-          const otherTrackDetails = otherVideoType === 'original' ? currentTrack!.originalSample : currentTrack!.newSong;
-          const otherPlayer = playerRef.current[otherTrackDetails.youtubeVideoId];
-          if (otherPlayer) {
-            otherPlayer.pauseVideo();
-          }
-        }
-        
-        setPlayingVideo(videoType);
-        const trackDetails = videoType === 'original' ? currentTrack!.originalSample : currentTrack!.newSong;
-        if (trackDetails.duration) {
-            timeoutRef.current = setTimeout(() => {
-                const player = playerRef.current[trackDetails.youtubeVideoId];
-                if (player) {
-                    player.pauseVideo();
-                }
-            }, trackDetails.duration * 1000);
-        }
-    } else {
-        setPlayingVideo(null);
+  const onStateChange = (event: { data: number }, side: Side) => {
+    if (!currentTrack) return;
+    if (event.data === 1) {
+      playingRef.current = side; setPlayingVideo(side); setHint('');
+      const otherTrack = side === 'original' ? currentTrack.newSong : currentTrack.originalSample;
+      playerRef.current[otherTrack.youtubeVideoId]?.pauseVideo();
+    } else if ((event.data === 2 || event.data === 0) && playingRef.current === side) {
+      playingRef.current = null; setPlayingVideo(null);
     }
   };
-
-  const playVideo = (videoType: 'original' | 'new') => {
-    if (!canPlayVideos) {
-      setCanPlayVideos(true);
-    }
-    
-    // Fade out jingle if it's playing
-    if (jinglePlaying) {
-      fadeOutJingle();
-    }
-    
-    // First pause the other video if it's playing
-    const otherVideoType = videoType === 'original' ? 'new' : 'original';
-    if (playingVideo === otherVideoType) {
-      const otherTrackDetails = otherVideoType === 'original' ? currentTrack!.originalSample : currentTrack!.newSong;
-      const otherPlayer = playerRef.current[otherTrackDetails.youtubeVideoId];
-      if (otherPlayer) {
-        otherPlayer.pauseVideo();
-      }
-    }
-    
-    // Then play the requested video
-    const trackDetails = videoType === 'original' ? currentTrack!.originalSample : currentTrack!.newSong;
-    const player = playerRef.current[trackDetails.youtubeVideoId];
-    if (player) {
-      player.playVideo();
-    }
-  };
-
-  const pauseVideo = (videoType: 'original' | 'new') => {
-    const trackDetails = videoType === 'original' ? currentTrack!.originalSample : currentTrack!.newSong;
-    const player = playerRef.current[trackDetails.youtubeVideoId];
-    if (player) {
-      player.pauseVideo();
-    }
-  };
-
-  const restartVideo = (videoType: 'original' | 'new') => {
-    if (!canPlayVideos) {
-      setCanPlayVideos(true);
-    }
-    
-    // Fade out jingle if it's playing
-    if (jinglePlaying) {
-      fadeOutJingle();
-    }
-    
-    // First pause the other video if it's playing
-    const otherVideoType = videoType === 'original' ? 'new' : 'original';
-    if (playingVideo === otherVideoType) {
-      const otherTrackDetails = otherVideoType === 'original' ? currentTrack!.originalSample : currentTrack!.newSong;
-      const otherPlayer = playerRef.current[otherTrackDetails.youtubeVideoId];
-      if (otherPlayer) {
-        otherPlayer.pauseVideo();
-      }
-    }
-    
-    // Then restart the requested video
-    const trackDetails = videoType === 'original' ? currentTrack!.originalSample : currentTrack!.newSong;
-    const player = playerRef.current[trackDetails.youtubeVideoId];
-    if (player) {
-      player.seekTo(trackDetails.startTime || 0, true);
-      player.playVideo();
-    }
-  };
-
-  // Helper function to safely auto-play the original sample
-  const tryAutoPlayOriginal = () => {
-    if (!settings.autoPlayEnabled || !currentTrack) return;
-    
-    const checkAndPlay = () => {
-      const player = playerRef.current[currentTrack.originalSample.youtubeVideoId];
-      if (player && playersReady[currentTrack.originalSample.youtubeVideoId]) {
-        playVideo('original');
-      } else {
-        // Retry after a short delay if player isn't ready yet
-        autoPlayTimeoutRef.current = setTimeout(checkAndPlay, 200);
-      }
-    };
-    
-    checkAndPlay();
-  };
-
+  const onPlayerError = (side: Side) => { if (playingRef.current === side) { playingRef.current = null; setPlayingVideo(null); } setErrors(prev => ({...prev, [side]: `${side === 'original' ? 'The original sample' : 'The new track'} can’t play here. Open it on YouTube or move to the next round.`})); };
+  const handleNextRound = () => { stopJingle(); tutorialRef.current?.destroy(); if (showTutorialBanner) markTutorialCompleted(); nextRound(); window.scrollTo({top: 0, behavior: 'instant'}); };
+  const handlePreviousRound = () => { stopJingle(); previousRound(); window.scrollTo({top: 0, behavior: 'instant'}); };
+  const opts = { height: '100%', width: '100%', playerVars: { autoplay: 0, controls: 0, rel: 0, playsinline: 1, origin: window.location.origin } };
   if (!currentTrack) {
     return (
       <div className="flex items-center justify-center h-64 modern-card max-w-md mx-auto p-8">
@@ -473,23 +160,9 @@ function GameRound() {
         <div className="absolute bottom-60 right-5 text-4xl retro-note-neon-pink animate-float-3" style={{animationDelay: '3s'}}>♩</div>
       </div>
 
-      <audio 
-        ref={audioRef} 
-        src={roundStartSound} 
-        preload="auto"
-        onEnded={() => {
-          setCanPlayVideos(true);
-          setJinglePlaying(false);
-          // Auto-play original sample if enabled
-          setTimeout(() => tryAutoPlayOriginal(), 100);
-        }}
-        onError={() => {
-          setCanPlayVideos(true);
-          setJinglePlaying(false);
-          // Auto-play original sample if enabled even if jingle fails
-          setTimeout(() => tryAutoPlayOriginal(), 100);
-        }}
-      />
+      <audio ref={audioRef} src={roundStartSound} preload="auto" onEnded={() => setIntroDone(true)} onError={() => setIntroDone(true)} />
+      {hint && <p className="modern-card p-3 text-gray-300 text-sm mb-4" role="status">{hint}</p>}
+      {(['original', 'new'] as const).map(side => errors[side] && <div key={side} className="playback-notice modern-card p-3 text-amber-200 text-sm mb-4 relative z-30" role="alert">{errors[side]} <a target="_blank" rel="noopener noreferrer" href={`https://www.youtube.com/watch?v=${(side === 'original' ? currentTrack.originalSample : currentTrack.newSong).youtubeVideoId}`} onClick={() => pauseVideo(side)}>Open on YouTube ↗</a></div>)}
 
       {/* Tutorial Banner */}
       {showTutorialBanner && (
@@ -506,6 +179,7 @@ function GameRound() {
                 </div>
               </div>
               <Button
+                aria-label="Skip tutorial"
                 onClick={() => {
                   if (tutorialRef.current) {
                     tutorialRef.current.destroy();
@@ -531,7 +205,7 @@ function GameRound() {
           </div>
         </div>
         
-        <div className="border border-gray-700/30 rounded-lg p-8 pt-12 relative">
+        <div className="border border-gray-700/30 rounded-lg p-3 sm:p-8 pt-12 relative">
 
       {/* Video Players */}
       <div className="tutorial-reveal-buttons-container-desktop relative z-10 mb-12">
@@ -539,14 +213,16 @@ function GameRound() {
         <div className="hidden md:flex items-center justify-center gap-8 mb-10">
           {/* Original Sample Player */}
           <div className="tutorial-original-sample-desktop video-container relative">
-            <div className="relative w-[400px] h-[400px]">
-              <YouTube
+            <div className="relative w-[400px] max-w-[38vw] aspect-square">
+              {isDesktop && <YouTube
                 videoId={currentTrack.originalSample.youtubeVideoId}
                 opts={{ ...opts, playerVars: { ...opts.playerVars, start: currentTrack.originalSample.startTime } }}
+                title="original music player"
+                onError={() => onPlayerError('original')}
                 onReady={(e) => onReady(e, currentTrack.originalSample.youtubeVideoId)}
                 onStateChange={(e) => onStateChange(e, 'original')}
-                className="absolute top-0 left-0 pointer-events-none rounded-t-24"
-              />
+                className="absolute top-0 left-0 pointer-events-none rounded-t-24 w-full h-full"
+              />}
               
               {/* Thumbnail Overlay */}
               {(playingVideo !== 'original' || !playersReady[currentTrack.originalSample.youtubeVideoId]) && (
@@ -556,6 +232,7 @@ function GameRound() {
                     alt="Video thumbnail"
                     className="w-full h-full object-cover rounded-t-24"
                     onError={(e) => {
+                      if (e.currentTarget.src.endsWith("/hqdefault.jpg")) { e.currentTarget.style.visibility = "hidden"; return; }
                       e.currentTarget.src = `https://img.youtube.com/vi/${currentTrack.originalSample.youtubeVideoId}/hqdefault.jpg`;
                     }}
                   />
@@ -571,12 +248,15 @@ function GameRound() {
               <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-30 flex gap-3">
                 <div className="tutorial-play-restart-buttons-desktop flex gap-3">
                   <Button
+                    aria-label={playingVideo === 'original' ? 'Pause original' : 'Play original'}
+                    disabled={!playersReady[currentTrack.originalSample.youtubeVideoId] || !!errors.original}
                     onClick={() => playingVideo === 'original' ? pauseVideo('original') : playVideo('original')}
                     className="modern-button primary w-16 h-16 rounded-full flex items-center justify-center"
                   >
                     {playingVideo === 'original' ? <Pause size={24} /> : <Play size={24} />}
                   </Button>
                   <Button
+                    aria-label="Restart original"
                     onClick={() => restartVideo('original')}
                     className="modern-button w-16 h-16 rounded-full flex items-center justify-center"
                   >
@@ -584,6 +264,7 @@ function GameRound() {
                   </Button>
                 </div>
                 <Button
+                  aria-label={originalRevealed ? "Hide original answer" : "Reveal original answer"}
                   onClick={() => setOriginalRevealed(!originalRevealed)}
                   className="tutorial-reveal-button modern-button w-16 h-16 rounded-full flex items-center justify-center"
                 >
@@ -603,6 +284,7 @@ function GameRound() {
                 <WaveformPlayer
                   isPlaying={playingVideo === 'original'}
                   duration={currentTrack.originalSample.duration}
+                  currentTime={elapsed.original}
                 />
               </div>
               
@@ -621,14 +303,16 @@ function GameRound() {
 
           {/* New Song Player */}
           <div className="tutorial-new-song-desktop video-container relative">
-            <div className="relative w-[400px] h-[400px]">
-              <YouTube
+            <div className="relative w-[400px] max-w-[38vw] aspect-square">
+              {isDesktop && <YouTube
                 videoId={currentTrack.newSong.youtubeVideoId}
                 opts={{ ...opts, playerVars: { ...opts.playerVars, start: currentTrack.newSong.startTime } }}
+                title="new music player"
+                onError={() => onPlayerError('new')}
                 onReady={(e) => onReady(e, currentTrack.newSong.youtubeVideoId)}
                 onStateChange={(e) => onStateChange(e, 'new')}
-                className="absolute top-0 left-0 pointer-events-none rounded-t-24"
-              />
+                className="absolute top-0 left-0 pointer-events-none rounded-t-24 w-full h-full"
+              />}
               
               {/* Thumbnail Overlay */}
               {(playingVideo !== 'new' || !playersReady[currentTrack.newSong.youtubeVideoId]) && (
@@ -638,6 +322,7 @@ function GameRound() {
                     alt="Video thumbnail"
                     className="w-full h-full object-cover rounded-t-24"
                     onError={(e) => {
+                      if (e.currentTarget.src.endsWith("/hqdefault.jpg")) { e.currentTarget.style.visibility = "hidden"; return; }
                       e.currentTarget.src = `https://img.youtube.com/vi/${currentTrack.newSong.youtubeVideoId}/hqdefault.jpg`;
                     }}
                   />
@@ -653,12 +338,15 @@ function GameRound() {
               <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-30 flex gap-3">
                 <div className="flex gap-3">
                   <Button
+                    aria-label={playingVideo === 'new' ? 'Pause new' : 'Play new'}
+                    disabled={!playersReady[currentTrack.newSong.youtubeVideoId] || !!errors.new}
                     onClick={() => playingVideo === 'new' ? pauseVideo('new') : playVideo('new')}
                     className="modern-button primary w-16 h-16 rounded-full flex items-center justify-center"
                   >
                     {playingVideo === 'new' ? <Pause size={24} /> : <Play size={24} />}
                   </Button>
                   <Button
+                    aria-label="Restart new"
                     onClick={() => restartVideo('new')}
                     className="modern-button w-16 h-16 rounded-full flex items-center justify-center"
                   >
@@ -666,6 +354,7 @@ function GameRound() {
                   </Button>
                 </div>
                 <Button
+                  aria-label={newSongRevealed ? "Hide new answer" : "Reveal new answer"}
                   onClick={() => setNewSongRevealed(!newSongRevealed)}
                   className="tutorial-reveal-button modern-button w-16 h-16 rounded-full flex items-center justify-center"
                 >
@@ -685,6 +374,7 @@ function GameRound() {
                 <WaveformPlayer
                   isPlaying={playingVideo === 'new'}
                   duration={currentTrack.newSong.duration}
+                  currentTime={elapsed.new}
                 />
               </div>
               
@@ -708,13 +398,15 @@ function GameRound() {
           {/* Original Sample Player */}
           <div className="tutorial-original-sample-mobile video-container relative mx-auto max-w-sm">
             <div className="relative w-full aspect-square max-w-[350px] mx-auto">
-              <YouTube
+              {!isDesktop && <YouTube
                 videoId={currentTrack.originalSample.youtubeVideoId}
-                opts={{ ...opts, playerVars: { ...opts.playerVars, start: currentTrack.originalSample.startTime }, width: '350', height: '350' }}
+                opts={{ ...opts, playerVars: { ...opts.playerVars, start: currentTrack.originalSample.startTime }, width: '100%', height: '100%' }}
+                title="original music player"
+                onError={() => onPlayerError('original')}
                 onReady={(e) => onReady(e, currentTrack.originalSample.youtubeVideoId)}
                 onStateChange={(e) => onStateChange(e, 'original')}
                 className="absolute top-0 left-0 pointer-events-none rounded-t-24 w-full h-full"
-              />
+              />}
               
               {/* Thumbnail Overlay */}
               {(playingVideo !== 'original' || !playersReady[currentTrack.originalSample.youtubeVideoId]) && (
@@ -724,6 +416,7 @@ function GameRound() {
                     alt="Video thumbnail"
                     className="w-full h-full object-cover rounded-t-24"
                     onError={(e) => {
+                      if (e.currentTarget.src.endsWith("/hqdefault.jpg")) { e.currentTarget.style.visibility = "hidden"; return; }
                       e.currentTarget.src = `https://img.youtube.com/vi/${currentTrack.originalSample.youtubeVideoId}/hqdefault.jpg`;
                     }}
                   />
@@ -739,12 +432,15 @@ function GameRound() {
               <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-30 flex gap-2">
                 <div className="tutorial-play-restart-buttons-mobile flex gap-2">
                   <Button
+                    aria-label={playingVideo === 'original' ? 'Pause original' : 'Play original'}
+                    disabled={!playersReady[currentTrack.originalSample.youtubeVideoId] || !!errors.original}
                     onClick={() => playingVideo === 'original' ? pauseVideo('original') : playVideo('original')}
                     className="modern-button primary w-12 h-12 rounded-full flex items-center justify-center"
                   >
                     {playingVideo === 'original' ? <Pause size={20} /> : <Play size={20} />}
                   </Button>
                   <Button
+                    aria-label="Restart original"
                     onClick={() => restartVideo('original')}
                     className="modern-button w-12 h-12 rounded-full flex items-center justify-center"
                   >
@@ -752,6 +448,7 @@ function GameRound() {
                   </Button>
                 </div>
                 <Button
+                  aria-label={originalRevealed ? "Hide original answer" : "Reveal original answer"}
                   onClick={() => setOriginalRevealed(!originalRevealed)}
                   className="tutorial-reveal-button modern-button w-12 h-12 rounded-full flex items-center justify-center"
                 >
@@ -771,6 +468,7 @@ function GameRound() {
                 <WaveformPlayer
                   isPlaying={playingVideo === 'original'}
                   duration={currentTrack.originalSample.duration}
+                  currentTime={elapsed.original}
                 />
               </div>
               
@@ -790,13 +488,15 @@ function GameRound() {
           {/* New Song Player */}
           <div className="tutorial-new-song-mobile video-container relative mx-auto max-w-sm">
             <div className="relative w-full aspect-square max-w-[350px] mx-auto">
-              <YouTube
+              {!isDesktop && <YouTube
                 videoId={currentTrack.newSong.youtubeVideoId}
-                opts={{ ...opts, playerVars: { ...opts.playerVars, start: currentTrack.newSong.startTime }, width: '350', height: '350' }}
+                opts={{ ...opts, playerVars: { ...opts.playerVars, start: currentTrack.newSong.startTime }, width: '100%', height: '100%' }}
+                title="new music player"
+                onError={() => onPlayerError('new')}
                 onReady={(e) => onReady(e, currentTrack.newSong.youtubeVideoId)}
                 onStateChange={(e) => onStateChange(e, 'new')}
                 className="absolute top-0 left-0 pointer-events-none rounded-t-24 w-full h-full"
-              />
+              />}
               
               {/* Thumbnail Overlay */}
               {(playingVideo !== 'new' || !playersReady[currentTrack.newSong.youtubeVideoId]) && (
@@ -806,6 +506,7 @@ function GameRound() {
                     alt="Video thumbnail"
                     className="w-full h-full object-cover rounded-t-24"
                     onError={(e) => {
+                      if (e.currentTarget.src.endsWith("/hqdefault.jpg")) { e.currentTarget.style.visibility = "hidden"; return; }
                       e.currentTarget.src = `https://img.youtube.com/vi/${currentTrack.newSong.youtubeVideoId}/hqdefault.jpg`;
                     }}
                   />
@@ -821,12 +522,15 @@ function GameRound() {
               <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-30 flex gap-2">
                 <div className="flex gap-2">
                   <Button
+                    aria-label={playingVideo === 'new' ? 'Pause new' : 'Play new'}
+                    disabled={!playersReady[currentTrack.newSong.youtubeVideoId] || !!errors.new}
                     onClick={() => playingVideo === 'new' ? pauseVideo('new') : playVideo('new')}
                     className="modern-button primary w-12 h-12 rounded-full flex items-center justify-center"
                   >
                     {playingVideo === 'new' ? <Pause size={20} /> : <Play size={20} />}
                   </Button>
                   <Button
+                    aria-label="Restart new"
                     onClick={() => restartVideo('new')}
                     className="modern-button w-12 h-12 rounded-full flex items-center justify-center"
                   >
@@ -834,6 +538,7 @@ function GameRound() {
                   </Button>
                 </div>
                 <Button
+                  aria-label={newSongRevealed ? "Hide new answer" : "Reveal new answer"}
                   onClick={() => setNewSongRevealed(!newSongRevealed)}
                   className="tutorial-reveal-button modern-button w-12 h-12 rounded-full flex items-center justify-center"
                 >
@@ -853,6 +558,7 @@ function GameRound() {
                 <WaveformPlayer
                   isPlaying={playingVideo === 'new'}
                   duration={currentTrack.newSong.duration}
+                  currentTime={elapsed.new}
                 />
               </div>
               
@@ -902,6 +608,8 @@ function GameRound() {
                 </div>
                 <div className="tutorial-scoring-buttons flex gap-3">
                   <Button 
+                    aria-label={`${player.name}: artist`}
+                    aria-pressed={!!roundScores[player.id]?.artist}
                     onClick={() => togglePoint(player.id, 'artist')}
                     className={`modern-button px-4 py-3 text-sm retro-tech font-bold flex items-center gap-2 chrome-border ${
                       roundScores[player.id]?.artist ? 'success' : ''
@@ -911,6 +619,8 @@ function GameRound() {
                     🎤 ARTIST
                   </Button>
                   <Button 
+                    aria-label={`${player.name}: track`}
+                    aria-pressed={!!roundScores[player.id]?.track}
                     onClick={() => togglePoint(player.id, 'track')}
                     className={`modern-button px-4 py-3 text-sm retro-tech font-bold flex items-center gap-2 chrome-border ${
                       roundScores[player.id]?.track ? 'success' : ''
@@ -920,6 +630,8 @@ function GameRound() {
                     🎵 TRACK
                   </Button>
                   <Button 
+                    aria-label={`${player.name}: sample`}
+                    aria-pressed={!!roundScores[player.id]?.sample}
                     onClick={() => togglePoint(player.id, 'sample')}
                     className={`modern-button px-4 py-3 text-sm retro-tech font-bold flex items-center gap-2 chrome-border ${
                       roundScores[player.id]?.sample ? 'success' : ''
@@ -950,6 +662,8 @@ function GameRound() {
                 {/* Scoring Buttons */}
                 <div className="tutorial-scoring-buttons grid grid-cols-3 gap-2">
                   <Button 
+                    aria-label={`${player.name}: artist`}
+                    aria-pressed={!!roundScores[player.id]?.artist}
                     onClick={() => togglePoint(player.id, 'artist')}
                     className={`modern-button px-2 py-3 text-xs retro-tech font-bold flex flex-col items-center gap-1 chrome-border ${
                       roundScores[player.id]?.artist ? 'success' : ''
@@ -962,6 +676,8 @@ function GameRound() {
                     <span>ARTIST</span>
                   </Button>
                   <Button 
+                    aria-label={`${player.name}: track`}
+                    aria-pressed={!!roundScores[player.id]?.track}
                     onClick={() => togglePoint(player.id, 'track')}
                     className={`modern-button px-2 py-3 text-xs retro-tech font-bold flex flex-col items-center gap-1 chrome-border ${
                       roundScores[player.id]?.track ? 'success' : ''
@@ -974,6 +690,8 @@ function GameRound() {
                     <span>TRACK</span>
                   </Button>
                   <Button 
+                    aria-label={`${player.name}: sample`}
+                    aria-pressed={!!roundScores[player.id]?.sample}
                     onClick={() => togglePoint(player.id, 'sample')}
                     className={`modern-button px-2 py-3 text-xs retro-tech font-bold flex flex-col items-center gap-1 chrome-border ${
                       roundScores[player.id]?.sample ? 'success' : ''
@@ -997,7 +715,7 @@ function GameRound() {
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center justify-between">
           <Button 
-            onClick={handlePreviousRound}
+            aria-label="Previous round" onClick={handlePreviousRound}
             disabled={currentRound <= 1}
             className="modern-button px-6 py-4 text-lg retro-tech font-bold flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed chrome-border"
           >
@@ -1009,7 +727,7 @@ function GameRound() {
             <div className="shrikhand-regular text-white text-lg font-bold">ROUND {currentRound} OF {totalRounds}</div>
           </div>
           <Button 
-            onClick={handleNextRound}
+            aria-label="Next round" onClick={handleNextRound}
             className="tutorial-next-round-desktop modern-button primary px-6 py-4 text-lg retro-tech font-bold flex items-center gap-3 chrome-border"
           >
             NEXT ROUND
@@ -1024,7 +742,7 @@ function GameRound() {
           </div>
           <div className="flex justify-between items-center gap-4">
             <Button 
-              onClick={handlePreviousRound}
+              aria-label="Previous round" onClick={handlePreviousRound}
               disabled={currentRound <= 1}
               className="modern-button px-4 py-3 text-sm retro-tech font-bold flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed flex-1 chrome-border"
             >
@@ -1032,7 +750,7 @@ function GameRound() {
               PREV
             </Button>
             <Button 
-              onClick={handleNextRound}
+              aria-label="Next round" onClick={handleNextRound}
               className="tutorial-next-round-mobile modern-button primary px-4 py-3 text-sm retro-tech font-bold flex items-center gap-2 flex-1 chrome-border"
             >
               NEXT

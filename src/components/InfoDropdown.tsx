@@ -20,7 +20,7 @@ export default function InfoDropdown() {
   return (
     <Menu as="div" className="relative inline-block text-left">
       <div>
-        <Menu.Button className="modern-button p-3 flex items-center justify-center">
+        <Menu.Button aria-label="About and how to play" className="modern-button p-3 flex items-center justify-center">
           <Info className="h-5 w-5" aria-hidden="true" />
         </Menu.Button>
       </div>
