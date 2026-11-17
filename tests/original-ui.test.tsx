@@ -61,3 +61,25 @@ it('uses media time for the sample limit and ignores the other player’s pause 
   act(() => { boundary.players[other].onStateChange({data:1}); boundary.players[id].onStateChange({data:2}); });
   expect(screen.getAllByLabelText('Pause new')).toHaveLength(2);
 });
+it('lets the complete jingle finish before autoplaying the original sample', async () => {
+  vi.useFakeTimers();
+  localStorage.setItem('whoSampledThatGame', JSON.stringify({
+    players: [{id:1,name:'Listener',score:0}], gamePhase:'playing', currentRound:1,
+    settings: {jingleEnabled:true,autoPlayEnabled:true},
+  }));
+  const { container, unmount } = render(<StrictMode><App /></StrictMode>);
+  const audio = container.querySelector('audio')!;
+  const pause = vi.spyOn(audio, 'pause').mockClear();
+  const api = { playVideo: vi.fn(), pauseVideo: vi.fn(), seekTo: vi.fn(), getCurrentTime: vi.fn().mockReturnValue(0), addEventListener: vi.fn() };
+  act(() => boundary.players[tracklist[0].originalSample.youtubeVideoId].onReady({target:api}));
+
+  // The actual jingle is ~11 seconds; buffering must not shorten it either.
+  await act(async () => { await vi.advanceTimersByTimeAsync(12000); });
+  expect(pause).not.toHaveBeenCalled();
+  expect(api.playVideo).not.toHaveBeenCalled();
+
+  fireEvent.ended(audio);
+  expect(api.playVideo).toHaveBeenCalledTimes(1);
+  unmount();
+  expect(pause).toHaveBeenCalledTimes(1);
+});
